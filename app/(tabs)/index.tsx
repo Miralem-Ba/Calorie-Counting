@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -9,6 +9,7 @@ export default function AboutScreen() {
   const [mealList, setMealList] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [totalCalories, setTotalCalories] = useState(0);
+  const [limitReached, setLimitReached] = useState(false); // Neuer Zustand für die Kalorienüberschreitung
   const dailyConsumptionGoal = 2500;
 
   useEffect(() => {
@@ -41,11 +42,9 @@ export default function AboutScreen() {
 
     // Überprüfen, ob das Kalorienlimit überschritten wurde
     if (total > dailyConsumptionGoal) {
-      Alert.alert(
-        "Kalorienlimit erreicht",
-        "Sie haben das tägliche Kalorienlimit von 2500 kcal überschritten!",
-        [{ text: "OK" }]
-      );
+      setLimitReached(true); // Setzt den Zustand, um das Limit zu markieren
+    } else {
+      setLimitReached(false); // Setzt den Zustand zurück, wenn unter dem Limit
     }
   };
 
@@ -142,6 +141,13 @@ export default function AboutScreen() {
       <Text style={styles.dailyConsumptionText}>
         Daily consumption goal: {dailyConsumptionGoal} kcal
       </Text>
+
+      {/* Zeige Warnung an, wenn das Kalorienlimit überschritten wurde */}
+      {limitReached && (
+        <Text style={styles.limitWarning}>
+          Warnung: Sie haben das tägliche Kalorienlimit überschritten!
+        </Text>
+      )}
     </View>
   );
 }
@@ -206,5 +212,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 5,
+  },
+  limitWarning: {
+    marginTop: 10,
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
   },
 });
