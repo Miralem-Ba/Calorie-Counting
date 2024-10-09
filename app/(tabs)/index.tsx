@@ -1,21 +1,14 @@
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importiere AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AboutScreen() {
-  // Zustand für das Eingabefeld 'meal' (Name des Essens)
   const [meal, setMeal] = useState('');
-
-  // Zustand für das Eingabefeld 'calories' (Kalorienangabe)
   const [calories, setCalories] = useState('');
-
-  // Zustand für das Eingabefeld 'mealType' (Art der Mahlzeit, z.B. Frühstück, Mittagessen)
   const [mealType, setMealType] = useState('');
-
-  // Zustand für die Liste der gespeicherten Mahlzeiten
   const [mealList, setMealList] = useState([]);
+  const [editingId, setEditingId] = useState(null); // Zustand zum Speichern der ID der zu bearbeitenden Mahlzeit
 
-  // Laden der gespeicherten Mahlzeiten beim Starten der App
   useEffect(() => {
     const loadMeals = async () => {
       try {
@@ -30,7 +23,6 @@ export default function AboutScreen() {
     loadMeals(); // Funktion aufrufen, um die gespeicherten Mahlzeiten zu laden
   }, []);
 
-  // Speichern der Mahlzeiten im AsyncStorage
   const saveMealsToStorage = async (meals) => {
     try {
       await AsyncStorage.setItem('@meals', JSON.stringify(meals)); // Liste der Mahlzeiten speichern
@@ -39,65 +31,96 @@ export default function AboutScreen() {
     }
   };
 
-  // Funktion, die beim Klick auf 'Save Meal' ausgeführt wird
+  // Funktion zum Speichern einer neuen Mahlzeit oder Aktualisieren einer bestehenden
   const handleSaveMeal = () => {
-    // Prüfen, ob alle Felder ausgefüllt sind
     if (meal && calories && mealType) {
-      const newMeal = { id: Math.random().toString(), meal, calories, mealType }; // Neue Mahlzeit erstellen
-
-      const updatedMeals = [...mealList, newMeal]; // Neue Mahlzeit zur Liste hinzufügen
-      setMealList(updatedMeals); // Liste im Zustand aktualisieren
-      saveMealsToStorage(updatedMeals); // Liste auch im Speicher speichern
+      if (editingId) {
+        // Mahlzeit bearbeiten
+        const updatedMeals = mealList.map(item =>
+          item.id === editingId
+            ? { ...item, meal, calories, mealType }
+            : item
+        );
+        setMealList(updatedMeals);
+        saveMealsToStorage(updatedMeals);
+        setEditingId(null); // Beende den Bearbeitungsmodus
+      } else {
+        // Neue Mahlzeit hinzufügen
+        const newMeal = { id: Math.random().toString(), meal, calories, mealType };
+        const updatedMeals = [...mealList, newMeal];
+        setMealList(updatedMeals);
+        saveMealsToStorage(updatedMeals);
+      }
 
       // Eingabefelder zurücksetzen
-      setMeal(''); 
-      setCalories(''); 
+      setMeal('');
+      setCalories('');
       setMealType('');
     }
+  };
+
+  // Funktion zum Bearbeiten einer Mahlzeit
+  const handleEditMeal = (id) => {
+    const mealToEdit = mealList.find(item => item.id === id);
+    setMeal(mealToEdit.meal);
+    setCalories(mealToEdit.calories);
+    setMealType(mealToEdit.mealType);
+    setEditingId(id); // Setze den Bearbeitungsmodus
+  };
+
+  // Funktion zum Löschen einer Mahlzeit
+  const handleDeleteMeal = (id) => {
+    const updatedMeals = mealList.filter(item => item.id !== id);
+    setMealList(updatedMeals);
+    saveMealsToStorage(updatedMeals);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Calories-Counting</Text>
 
-      {/* Eingabefeld für den Namen der Mahlzeit */}
+      {/* Eingabefelder für die Mahlzeit */}
       <TextInput
         style={styles.input}
         placeholder="Enter your Meal"
         value={meal}
-        onChangeText={setMeal} // Aktualisiert den Zustand 'meal' bei Eingabe
+        onChangeText={setMeal}
       />
-
-      {/* Eingabefeld für die Kalorien der Mahlzeit */}
       <TextInput
         style={styles.input}
         placeholder="Enter your Calories"
         value={calories}
-        onChangeText={setCalories} // Aktualisiert den Zustand 'calories' bei Eingabe
-        keyboardType="numeric" // Setzt die Tastatur auf numerisch (nur Zahlen)
+        onChangeText={setCalories}
+        keyboardType="numeric"
       />
-
-      {/* Eingabefeld für den Typ der Mahlzeit (z.B. Frühstück, Mittagessen) */}
       <TextInput
         style={styles.input}
         placeholder="Enter your Meal Type"
         value={mealType}
-        onChangeText={setMealType} // Aktualisiert den Zustand 'mealType' bei Eingabe
+        onChangeText={setMealType}
       />
 
-      {/* Button zum Speichern der Mahlzeit */}
-      <Button title="Save Meal" onPress={handleSaveMeal} />
+      {/* Button zum Speichern oder Bearbeiten */}
+      <Button title={editingId ? "Update Meal" : "Save Meal"} onPress={handleSaveMeal} />
 
-      {/* Liste der gespeicherten Mahlzeiten anzeigen */}
+      {/* Liste der gespeicherten Mahlzeiten */}
       <FlatList
-        data={mealList} // Die Daten, die angezeigt werden sollen (Liste der Mahlzeiten)
-        keyExtractor={(item) => item.id} // Jeder Eintrag muss einen eindeutigen Schlüssel (ID) haben
+        data={mealList}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.mealItem}>
-            {/* Zeigt die gespeicherte Mahlzeit, die Kalorien und den Typ der Mahlzeit an */}
             <Text style={styles.mealText}>
               {item.meal} - {item.calories} kcal - {item.mealType}
             </Text>
+            {/* Buttons für Bearbeiten und Löschen */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity onPress={() => handleEditMeal(item.id)} style={styles.editButton}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteMeal(item.id)} style={styles.deleteButton}>
+                <Text style={styles.buttonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       />
@@ -110,27 +133,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#fff', // Hintergrundfarbe Weiß
+    backgroundColor: '#fff',
   },
   header: {
-    fontSize: 24, // Schriftgröße
-    fontWeight: 'bold', // Fettdruck
-    marginBottom: 16, // Abstand nach unten
-    textAlign: 'center', // Text zentrieren
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   input: {
-    borderWidth: 1, // Rahmenbreite
-    borderColor: '#ccc', // Rahmenfarbe
-    padding: 10, // Innenabstand
-    marginBottom: 10, // Abstand nach unten
-    borderRadius: 5, // Abgerundete Ecken
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
   mealItem: {
-    padding: 10, // Innenabstand
-    borderBottomWidth: 1, // Unterer Rahmen für jede Mahlzeit
-    borderBottomColor: '#ccc', // Rahmenfarbe für den unteren Rand
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   mealText: {
-    fontSize: 16, // Schriftgröße
+    fontSize: 16,
+    flex: 3,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    flex: 1,
+    justifyContent: 'space-around',
+  },
+  editButton: {
+    backgroundColor: '#4CAF50',
+    padding: 5,
+    borderRadius: 5,
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    padding: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#fff',
   },
 });
