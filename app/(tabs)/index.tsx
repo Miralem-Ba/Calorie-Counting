@@ -1,6 +1,8 @@
-import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons'; // Verwenden wir für die Symbole
+import * as ImagePicker from 'expo-image-picker'; // Verwenden für die Kamera
 
 export default function AboutScreen() {
   const [meal, setMeal] = useState('');
@@ -9,7 +11,7 @@ export default function AboutScreen() {
   const [mealList, setMealList] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [totalCalories, setTotalCalories] = useState(0);
-  const [limitReached, setLimitReached] = useState(false); // Neuer Zustand für die Kalorienüberschreitung
+  const [limitReached, setLimitReached] = useState(false);
   const dailyConsumptionGoal = 2500;
 
   useEffect(() => {
@@ -39,18 +41,24 @@ export default function AboutScreen() {
   const calculateTotalCalories = (meals) => {
     const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0);
     setTotalCalories(total);
-
-    // Überprüfen, ob das Kalorienlimit überschritten wurde
-    if (total > dailyConsumptionGoal) {
-      setLimitReached(true); // Setzt den Zustand, um das Limit zu markieren
-    } else {
-      setLimitReached(false); // Setzt den Zustand zurück, wenn unter dem Limit
-    }
+    setLimitReached(total > dailyConsumptionGoal);
   };
 
   const handleSaveMeal = () => {
     if (meal && calories && mealType) {
+      // Prüfen, ob die Mahlzeit bereits existiert, außer wenn wir sie gerade bearbeiten
+      const mealExists = mealList.some(item => 
+        item.meal.toLowerCase() === meal.toLowerCase() && item.id !== editingId
+      );
+  
+      if (mealExists) {
+        // Zeigt eine Fehlermeldung an, wenn die Mahlzeit bereits gespeichert wurde
+        Alert.alert("Fehler", "Diese Mahlzeit ist bereits gespeichert.");
+        return; // Speichervorgang abbrechen
+      }
+  
       if (editingId) {
+        // Mahlzeit bearbeiten
         const updatedMeals = mealList.map(item =>
           item.id === editingId
             ? { ...item, meal, calories, mealType }
@@ -61,18 +69,23 @@ export default function AboutScreen() {
         calculateTotalCalories(updatedMeals);
         setEditingId(null);
       } else {
+        // Neue Mahlzeit hinzufügen
         const newMeal = { id: Math.random().toString(), meal, calories, mealType };
         const updatedMeals = [...mealList, newMeal];
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
         calculateTotalCalories(updatedMeals);
       }
-
+  
+      // Felder zurücksetzen
       setMeal('');
       setCalories('');
       setMealType('');
+    } else {
+      Alert.alert("Fehler", "Bitte füllen Sie alle Felder aus.");
     }
   };
+  
 
   const handleEditMeal = (id) => {
     const mealToEdit = mealList.find(item => item.id === id);
@@ -142,7 +155,6 @@ export default function AboutScreen() {
         Daily consumption goal: {dailyConsumptionGoal} kcal
       </Text>
 
-      {/* Zeige Warnung an, wenn das Kalorienlimit überschritten wurde */}
       {limitReached && (
         <Text style={styles.limitWarning}>
           Warnung: Sie haben das tägliche Kalorienlimit überschritten!
@@ -157,8 +169,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    paddingLeft: 550,
-    paddingRight: 550,
+    maxWidth: 600, // Setzt eine maximale Breite von 600 Pixeln, um das Layout schmal und zentriert zu halten
+    width: '90%', // Setzt die Breite auf 90%, um auf verschiedenen Bildschirmgrößen besser auszusehen
+    marginLeft: 'auto', // Zentriert den Container horizontal
+    marginRight: 'auto', // Zentriert den Container horizontal
     backgroundColor: '#fff',
   },
   header: {
