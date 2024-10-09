@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -7,9 +7,9 @@ export default function AboutScreen() {
   const [calories, setCalories] = useState('');
   const [mealType, setMealType] = useState('');
   const [mealList, setMealList] = useState([]);
-  const [editingId, setEditingId] = useState(null); // Zustand zum Speichern der ID der zu bearbeitenden Mahlzeit
-  const [totalCalories, setTotalCalories] = useState(0); // Zustand für die totale Kalorien
-  const dailyConsumptionGoal = 2500; // Feste Vorgabe für das Kalorienziel
+  const [editingId, setEditingId] = useState(null);
+  const [totalCalories, setTotalCalories] = useState(0);
+  const dailyConsumptionGoal = 2500;
 
   useEffect(() => {
     const loadMeals = async () => {
@@ -18,7 +18,7 @@ export default function AboutScreen() {
         if (storedMeals !== null) {
           const meals = JSON.parse(storedMeals);
           setMealList(meals);
-          calculateTotalCalories(meals); // Totale Kalorien berechnen
+          calculateTotalCalories(meals);
         }
       } catch (e) {
         console.error('Error loading meals from storage', e);
@@ -36,8 +36,17 @@ export default function AboutScreen() {
   };
 
   const calculateTotalCalories = (meals) => {
-    const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0); // Summe der Kalorien
+    const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0);
     setTotalCalories(total);
+
+    // Überprüfen, ob das Kalorienlimit überschritten wurde
+    if (total > dailyConsumptionGoal) {
+      Alert.alert(
+        "Kalorienlimit erreicht",
+        "Sie haben das tägliche Kalorienlimit von 2500 kcal überschritten!",
+        [{ text: "OK" }]
+      );
+    }
   };
 
   const handleSaveMeal = () => {
@@ -50,14 +59,14 @@ export default function AboutScreen() {
         );
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
-        calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
+        calculateTotalCalories(updatedMeals);
         setEditingId(null);
       } else {
         const newMeal = { id: Math.random().toString(), meal, calories, mealType };
         const updatedMeals = [...mealList, newMeal];
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
-        calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
+        calculateTotalCalories(updatedMeals);
       }
 
       setMeal('');
@@ -78,7 +87,7 @@ export default function AboutScreen() {
     const updatedMeals = mealList.filter(item => item.id !== id);
     setMealList(updatedMeals);
     saveMealsToStorage(updatedMeals);
-    calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
+    calculateTotalCalories(updatedMeals);
   };
 
   return (
@@ -127,7 +136,6 @@ export default function AboutScreen() {
         )}
       />
 
-      {/* Totale Kalorien und Kalorienziel anzeigen */}
       <Text style={styles.totalCaloriesText}>
         Total Calories: {totalCalories} kcal
       </Text>
