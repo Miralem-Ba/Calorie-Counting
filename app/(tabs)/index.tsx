@@ -5,24 +5,26 @@ import { Ionicons } from '@expo/vector-icons'; // Verwenden wir für die Symbole
 import * as ImagePicker from 'expo-image-picker'; // Verwenden für die Kamera
 
 export default function AboutScreen() {
-  const [meal, setMeal] = useState('');
-  const [calories, setCalories] = useState('');
-  const [mealType, setMealType] = useState('');
-  const [mealList, setMealList] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [totalCalories, setTotalCalories] = useState(0);
-  const [limitReached, setLimitReached] = useState(false);
+  // Zustand für die Mahlzeit, Kalorien, Art der Mahlzeit, Liste der Mahlzeiten, zu bearbeitende ID, Gesamtzahl der Kalorien und Kalorienlimit
+  const [meal, setMeal] = useState(''); // Mahlzeit-Eingabe
+  const [calories, setCalories] = useState(''); // Kalorien-Eingabe
+  const [mealType, setMealType] = useState(''); // Mahlzeit-Typ-Eingabe
+  const [mealList, setMealList] = useState([]); // Liste der gespeicherten Mahlzeiten
+  const [editingId, setEditingId] = useState(null); // ID der zu bearbeitenden Mahlzeit
+  const [totalCalories, setTotalCalories] = useState(0); // Gesamtzahl der Kalorien
+  const [limitReached, setLimitReached] = useState(false); // Status für das Kalorienlimit
   const [mealExistsWarning, setMealExistsWarning] = useState(false); // Warnung für doppelte Mahlzeit
-  const dailyConsumptionGoal = 2500;
+  const dailyConsumptionGoal = 2500; // Tägliches Kalorienziel
 
+  // useEffect-Hook zum Laden der gespeicherten Mahlzeiten bei der Initialisierung
   useEffect(() => {
     const loadMeals = async () => {
       try {
-        const storedMeals = await AsyncStorage.getItem('@meals');
+        const storedMeals = await AsyncStorage.getItem('@meals'); // Holt gespeicherte Mahlzeiten aus AsyncStorage
         if (storedMeals !== null) {
           const meals = JSON.parse(storedMeals);
           setMealList(meals);
-          calculateTotalCalories(meals);
+          calculateTotalCalories(meals); // Berechnet die Gesamtzahl der Kalorien
         }
       } catch (e) {
         console.error('Error loading meals from storage', e);
@@ -31,20 +33,23 @@ export default function AboutScreen() {
     loadMeals();
   }, []);
 
+  // Funktion zum Speichern der Mahlzeiten im AsyncStorage
   const saveMealsToStorage = async (meals) => {
     try {
-      await AsyncStorage.setItem('@meals', JSON.stringify(meals));
+      await AsyncStorage.setItem('@meals', JSON.stringify(meals)); // Speichert die Mahlzeiten als JSON
     } catch (e) {
       console.error('Error saving meals to storage', e);
     }
   };
 
+  // Funktion zur Berechnung der Gesamtkalorien und Überprüfung des Kalorienlimits
   const calculateTotalCalories = (meals) => {
-    const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0);
+    const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0); // Summiert die Kalorien
     setTotalCalories(total);
-    setLimitReached(total > dailyConsumptionGoal);
+    setLimitReached(total > dailyConsumptionGoal); // Überprüft, ob das Kalorienlimit überschritten ist
   };
 
+  // Funktion zum Speichern der neuen oder bearbeiteten Mahlzeit
   const handleSaveMeal = () => {
     if (meal && calories && mealType) {
       // Prüfen, ob die Mahlzeit bereits existiert, außer wenn wir sie gerade bearbeiten
@@ -62,7 +67,7 @@ export default function AboutScreen() {
       setMealExistsWarning(false);
 
       if (editingId) {
-        // Mahlzeit bearbeiten
+        // Bearbeiten einer bestehenden Mahlzeit
         const updatedMeals = mealList.map(item =>
           item.id === editingId
             ? { ...item, meal, calories, mealType }
@@ -70,43 +75,46 @@ export default function AboutScreen() {
         );
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
-        calculateTotalCalories(updatedMeals);
+        calculateTotalCalories(updatedMeals); // Aktualisiert die Kalorienanzahl
         setEditingId(null);
       } else {
-        // Neue Mahlzeit hinzufügen
+        // Hinzufügen einer neuen Mahlzeit
         const newMeal = { id: Math.random().toString(), meal, calories, mealType };
         const updatedMeals = [...mealList, newMeal];
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
-        calculateTotalCalories(updatedMeals);
+        calculateTotalCalories(updatedMeals); // Aktualisiert die Kalorienanzahl
       }
 
-      // Felder zurücksetzen
+      // Eingabefelder nach dem Speichern leeren
       setMeal('');
       setCalories('');
       setMealType('');
     }
   };
 
+  // Funktion zum Bearbeiten einer vorhandenen Mahlzeit
   const handleEditMeal = (id) => {
-    const mealToEdit = mealList.find(item => item.id === id);
-    setMeal(mealToEdit.meal);
+    const mealToEdit = mealList.find(item => item.id === id); // Findet die zu bearbeitende Mahlzeit
+    setMeal(mealToEdit.meal); // Füllt die Eingabefelder mit den bestehenden Werten
     setCalories(mealToEdit.calories);
     setMealType(mealToEdit.mealType);
-    setEditingId(id);
+    setEditingId(id); // Setzt die aktuelle Bearbeitungs-ID
   };
 
+  // Funktion zum Löschen einer Mahlzeit
   const handleDeleteMeal = (id) => {
-    const updatedMeals = mealList.filter(item => item.id !== id);
+    const updatedMeals = mealList.filter(item => item.id !== id); // Filtert die zu löschende Mahlzeit heraus
     setMealList(updatedMeals);
-    saveMealsToStorage(updatedMeals);
-    calculateTotalCalories(updatedMeals);
+    saveMealsToStorage(updatedMeals); // Speichert die aktualisierte Liste
+    calculateTotalCalories(updatedMeals); // Aktualisiert die Kalorienanzahl
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Calories-Counting</Text>
 
+      {/* Eingabefelder für Mahlzeit, Kalorien und Art der Mahlzeit */}
       <TextInput
         style={styles.input}
         placeholder="Enter your Meal"
@@ -127,8 +135,10 @@ export default function AboutScreen() {
         onChangeText={setMealType}
       />
 
+      {/* Button zum Speichern der Mahlzeit */}
       <Button title={editingId ? "Update Meal" : "Save Meal"} onPress={handleSaveMeal} />
 
+      {/* Liste der gespeicherten Mahlzeiten */}
       <FlatList
         data={mealList}
         keyExtractor={(item) => item.id}
@@ -138,9 +148,11 @@ export default function AboutScreen() {
               {item.meal} - {item.calories} kcal - {item.mealType}
             </Text>
             <View style={styles.buttonContainer}>
+              {/* Button zum Bearbeiten der Mahlzeit */}
               <TouchableOpacity onPress={() => handleEditMeal(item.id)} style={styles.editButton}>
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
+              {/* Button zum Löschen der Mahlzeit */}
               <TouchableOpacity onPress={() => handleDeleteMeal(item.id)} style={styles.deleteButton}>
                 <Text style={styles.buttonText}>Delete</Text>
               </TouchableOpacity>
@@ -149,6 +161,7 @@ export default function AboutScreen() {
         )}
       />
 
+      {/* Anzeige der Gesamtanzahl der Kalorien und des täglichen Ziels */}
       <Text style={styles.totalCaloriesText}>
         Total Calories: {totalCalories} kcal
       </Text>
@@ -156,12 +169,14 @@ export default function AboutScreen() {
         Daily consumption goal: {dailyConsumptionGoal} kcal
       </Text>
 
+      {/* Warnung bei überschrittenem Kalorienlimit */}
       {limitReached && (
         <Text style={styles.limitWarning}>
           Warnung: Sie haben das tägliche Kalorienlimit überschritten!
         </Text>
       )}
 
+      {/* Warnung bei doppelter Mahlzeit */}
       {mealExistsWarning && (
         <Text style={styles.limitWarning}>
           Fehler: Diese Mahlzeit ist bereits gespeichert!
