@@ -1,5 +1,6 @@
 import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Importiere AsyncStorage
 
 export default function AboutScreen() {
   // Zustand für das Eingabefeld 'meal' (Name des Essens)
@@ -14,27 +15,51 @@ export default function AboutScreen() {
   // Zustand für die Liste der gespeicherten Mahlzeiten
   const [mealList, setMealList] = useState([]);
 
+  // Laden der gespeicherten Mahlzeiten beim Starten der App
+  useEffect(() => {
+    const loadMeals = async () => {
+      try {
+        const storedMeals = await AsyncStorage.getItem('@meals'); // Daten aus dem Speicher abrufen
+        if (storedMeals !== null) {
+          setMealList(JSON.parse(storedMeals)); // Wenn vorhanden, gespeicherte Mahlzeiten setzen
+        }
+      } catch (e) {
+        console.error('Error loading meals from storage', e); // Fehler beim Laden
+      }
+    };
+    loadMeals(); // Funktion aufrufen, um die gespeicherten Mahlzeiten zu laden
+  }, []);
+
+  // Speichern der Mahlzeiten im AsyncStorage
+  const saveMealsToStorage = async (meals) => {
+    try {
+      await AsyncStorage.setItem('@meals', JSON.stringify(meals)); // Liste der Mahlzeiten speichern
+    } catch (e) {
+      console.error('Error saving meals to storage', e); // Fehler beim Speichern
+    }
+  };
+
   // Funktion, die beim Klick auf 'Save Meal' ausgeführt wird
   const handleSaveMeal = () => {
     // Prüfen, ob alle Felder ausgefüllt sind
     if (meal && calories && mealType) {
-      // Eine neue Mahlzeit erstellen mit zufälliger ID, Name des Essens, Kalorien und Mahlzeitentyp
-      const newMeal = { id: Math.random().toString(), meal, calories, mealType };
+      const newMeal = { id: Math.random().toString(), meal, calories, mealType }; // Neue Mahlzeit erstellen
 
-      // Die neue Mahlzeit zur bestehenden Liste hinzufügen
-      setMealList([...mealList, newMeal]);
+      const updatedMeals = [...mealList, newMeal]; // Neue Mahlzeit zur Liste hinzufügen
+      setMealList(updatedMeals); // Liste im Zustand aktualisieren
+      saveMealsToStorage(updatedMeals); // Liste auch im Speicher speichern
 
-      // Nach dem Speichern die Eingabefelder zurücksetzen
-      setMeal(''); // Zurücksetzen des Eingabefeldes für das Essen
-      setCalories(''); // Zurücksetzen des Kalorienfeldes
-      setMealType(''); // Zurücksetzen des Mahlzeitentyps
+      // Eingabefelder zurücksetzen
+      setMeal(''); 
+      setCalories(''); 
+      setMealType('');
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Calories-Counting</Text>
-      
+
       {/* Eingabefeld für den Namen der Mahlzeit */}
       <TextInput
         style={styles.input}
