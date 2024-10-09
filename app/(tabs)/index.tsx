@@ -13,7 +13,7 @@ export default function AboutScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>MyCaloriesTracker</Text>
+      <Text style={styles.header}>Calories-Counting</Text>
       
       <TextInput
         style={styles.input}
