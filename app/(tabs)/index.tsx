@@ -8,34 +8,41 @@ export default function AboutScreen() {
   const [mealType, setMealType] = useState('');
   const [mealList, setMealList] = useState([]);
   const [editingId, setEditingId] = useState(null); // Zustand zum Speichern der ID der zu bearbeitenden Mahlzeit
+  const [totalCalories, setTotalCalories] = useState(0); // Zustand für die totale Kalorien
+  const dailyConsumptionGoal = 2500; // Feste Vorgabe für das Kalorienziel
 
   useEffect(() => {
     const loadMeals = async () => {
       try {
-        const storedMeals = await AsyncStorage.getItem('@meals'); // Daten aus dem Speicher abrufen
+        const storedMeals = await AsyncStorage.getItem('@meals');
         if (storedMeals !== null) {
-          setMealList(JSON.parse(storedMeals)); // Wenn vorhanden, gespeicherte Mahlzeiten setzen
+          const meals = JSON.parse(storedMeals);
+          setMealList(meals);
+          calculateTotalCalories(meals); // Totale Kalorien berechnen
         }
       } catch (e) {
-        console.error('Error loading meals from storage', e); // Fehler beim Laden
+        console.error('Error loading meals from storage', e);
       }
     };
-    loadMeals(); // Funktion aufrufen, um die gespeicherten Mahlzeiten zu laden
+    loadMeals();
   }, []);
 
   const saveMealsToStorage = async (meals) => {
     try {
-      await AsyncStorage.setItem('@meals', JSON.stringify(meals)); // Liste der Mahlzeiten speichern
+      await AsyncStorage.setItem('@meals', JSON.stringify(meals));
     } catch (e) {
-      console.error('Error saving meals to storage', e); // Fehler beim Speichern
+      console.error('Error saving meals to storage', e);
     }
   };
 
-  // Funktion zum Speichern einer neuen Mahlzeit oder Aktualisieren einer bestehenden
+  const calculateTotalCalories = (meals) => {
+    const total = meals.reduce((acc, meal) => acc + parseInt(meal.calories, 10), 0); // Summe der Kalorien
+    setTotalCalories(total);
+  };
+
   const handleSaveMeal = () => {
     if (meal && calories && mealType) {
       if (editingId) {
-        // Mahlzeit bearbeiten
         const updatedMeals = mealList.map(item =>
           item.id === editingId
             ? { ...item, meal, calories, mealType }
@@ -43,43 +50,41 @@ export default function AboutScreen() {
         );
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
-        setEditingId(null); // Beende den Bearbeitungsmodus
+        calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
+        setEditingId(null);
       } else {
-        // Neue Mahlzeit hinzufügen
         const newMeal = { id: Math.random().toString(), meal, calories, mealType };
         const updatedMeals = [...mealList, newMeal];
         setMealList(updatedMeals);
         saveMealsToStorage(updatedMeals);
+        calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
       }
 
-      // Eingabefelder zurücksetzen
       setMeal('');
       setCalories('');
       setMealType('');
     }
   };
 
-  // Funktion zum Bearbeiten einer Mahlzeit
   const handleEditMeal = (id) => {
     const mealToEdit = mealList.find(item => item.id === id);
     setMeal(mealToEdit.meal);
     setCalories(mealToEdit.calories);
     setMealType(mealToEdit.mealType);
-    setEditingId(id); // Setze den Bearbeitungsmodus
+    setEditingId(id);
   };
 
-  // Funktion zum Löschen einer Mahlzeit
   const handleDeleteMeal = (id) => {
     const updatedMeals = mealList.filter(item => item.id !== id);
     setMealList(updatedMeals);
     saveMealsToStorage(updatedMeals);
+    calculateTotalCalories(updatedMeals); // Aktualisiere die totale Kalorienzahl
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Calories-Counting</Text>
 
-      {/* Eingabefelder für die Mahlzeit */}
       <TextInput
         style={styles.input}
         placeholder="Enter your Meal"
@@ -100,10 +105,8 @@ export default function AboutScreen() {
         onChangeText={setMealType}
       />
 
-      {/* Button zum Speichern oder Bearbeiten */}
       <Button title={editingId ? "Update Meal" : "Save Meal"} onPress={handleSaveMeal} />
 
-      {/* Liste der gespeicherten Mahlzeiten */}
       <FlatList
         data={mealList}
         keyExtractor={(item) => item.id}
@@ -112,7 +115,6 @@ export default function AboutScreen() {
             <Text style={styles.mealText}>
               {item.meal} - {item.calories} kcal - {item.mealType}
             </Text>
-            {/* Buttons für Bearbeiten und Löschen */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity onPress={() => handleEditMeal(item.id)} style={styles.editButton}>
                 <Text style={styles.buttonText}>Edit</Text>
@@ -124,6 +126,14 @@ export default function AboutScreen() {
           </View>
         )}
       />
+
+      {/* Totale Kalorien und Kalorienziel anzeigen */}
+      <Text style={styles.totalCaloriesText}>
+        Total Calories: {totalCalories} kcal
+      </Text>
+      <Text style={styles.dailyConsumptionText}>
+        Daily consumption goal: {dailyConsumptionGoal} kcal
+      </Text>
     </View>
   );
 }
@@ -177,5 +187,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+  },
+  totalCaloriesText: {
+    marginTop: 20,
+    fontSize: 18,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  dailyConsumptionText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 5,
   },
 });
